@@ -50,6 +50,9 @@ void ThreadM95Task(void const * argument)
 	osSemaphoreWait(TransmissionStateHandle, osWaitForever); // обнуляем семафор, при создании семафора его значение равно 1
 	osSemaphoreWait(ReceiveStateHandle, osWaitForever); // обнуляем семафор, при создании семафора его значение равно 1
 
+	osTimerStart(Ring_Center_TimerHandle, 60000); // запускаем таймер для перезагрузки по его окончанию
+
+	/*
 	if(AT()==AT_ERROR)
 	{
 		m95_power_on();
@@ -68,6 +71,7 @@ void ThreadM95Task(void const * argument)
 
 		}
 	}
+	*/
 
 	osMutexWait(Fm25v02MutexHandle, osWaitForever);
 	fm25v02_write(2*VERSION_REG, 0x01);
@@ -327,7 +331,7 @@ void ThreadM95Task(void const * argument)
 
 			case CONNECT_OK: // Если соединение установлено
 
-				osTimerStart(Ring_Center_TimerHandle, 60000); // запускаем таймер и обнуляем его при каждом ответе о соединении.
+				//osTimerStart(Ring_Center_TimerHandle, 60000); // запускаем таймер и обнуляем его при каждом ответе о соединении.
 				//osThreadResume(CallRingCenterTaskHandle); // пробуждаем процесс запроса к серверу
 				LED1_ON();
 				if( AT_COPS() == AT_OK )

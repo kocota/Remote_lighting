@@ -84,6 +84,28 @@ void ThreadMainTask(void const * argument)
 
 				osThreadResume(EventWriteTaskHandle);
 			}
+
+			if(status_registers.power_on_lighting_reg == 0) // если основного питания до этого не было, записываем в регистр наличия питания освещения 1
+			{
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				fm25v02_write(2*POWER_ON_LIGHTING_REG, 0x00);
+				fm25v02_write(2*POWER_ON_LIGHTING_REG+1, 1);
+				status_registers.power_on_lighting_reg = 1;
+				osMutexRelease(Fm25v02MutexHandle);
+
+				//osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				//fm25v02_write(2*GPRS_CALL_REG, 0x00);
+				//fm25v02_write(2*GPRS_CALL_REG+1, CALL_ON);
+				//osMutexRelease(Fm25v02MutexHandle);
+
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				fm25v02_write(2*SYSTEM_STATUS_REG, 0x00);
+				fm25v02_write(2*SYSTEM_STATUS_REG+1, POWER_ON);
+				status_registers.system_status_reg = POWER_ON;
+				osMutexRelease(Fm25v02MutexHandle);
+
+				osThreadResume(EventWriteTaskHandle);
+			}
 		}
 		else // если на пине PFO микросхемы TPS3306-15 нет наличия единицы
 		{
@@ -99,6 +121,28 @@ void ThreadMainTask(void const * argument)
 				fm25v02_write(2*GPRS_CALL_REG, 0x00);
 				fm25v02_write(2*GPRS_CALL_REG+1, CALL_ON);
 				osMutexRelease(Fm25v02MutexHandle);
+
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				fm25v02_write(2*SYSTEM_STATUS_REG, 0x00);
+				fm25v02_write(2*SYSTEM_STATUS_REG+1, POWER_OFF);
+				status_registers.system_status_reg = POWER_OFF;
+				osMutexRelease(Fm25v02MutexHandle);
+
+				osThreadResume(EventWriteTaskHandle);
+			}
+
+			if(status_registers.power_on_lighting_reg == 1)
+			{
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				fm25v02_write(2*POWER_ON_LIGHTING_REG, 0x00);
+				fm25v02_write(2*POWER_ON_LIGHTING_REG+1, 0x00);
+				status_registers.power_on_lighting_reg = 0;
+				osMutexRelease(Fm25v02MutexHandle);
+
+				//osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				//fm25v02_write(2*GPRS_CALL_REG, 0x00);
+				//fm25v02_write(2*GPRS_CALL_REG+1, CALL_ON);
+				//osMutexRelease(Fm25v02MutexHandle);
 
 				osMutexWait(Fm25v02MutexHandle, osWaitForever);
 				fm25v02_write(2*SYSTEM_STATUS_REG, 0x00);

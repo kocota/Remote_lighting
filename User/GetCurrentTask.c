@@ -56,17 +56,34 @@ void ThreadGetCurrentTask(void const * argument)
 	volatile uint16_t phase_c1_alarm_state=0;
 	volatile uint16_t phase_c2_alarm_state=0;
 
+	volatile uint8_t current_counter = 0;
+
+	//volatile uint16_t overcurrent_a_counter = 0;
+	//volatile uint16_t overcurrent_b_counter = 0;
+	//volatile uint16_t overcurrent_c_counter = 0;
+
 	uint16_t current_a_temp;
 	uint16_t current_b_temp;
 	uint16_t current_c_temp;
+
+	uint16_t current_a_sum = 0;
+	uint16_t current_b_sum = 0;
+	uint16_t current_c_sum = 0;
+
+	uint16_t current_a = 0;
+	uint16_t current_b = 0;
+	uint16_t current_c = 0;
+
+
 
 
 
 	for(;;)
 	{
-		switch(control_registers.lighting_switching_reg) // проверяем включена ли функция освещения
-		{
-			case(LIGHTING_ON): // если функция освещения включена, то делаем измерения тока
+
+		//switch(control_registers.lighting_switching_reg) // проверяем включена ли функция освещения
+		//{
+			//case(LIGHTING_ON): // если функция освещения включена, то делаем измерения тока
 
 					HAL_ADCEx_InjectedStart(&hadc1);
 
@@ -83,6 +100,41 @@ void ThreadGetCurrentTask(void const * argument)
 					current_b_temp = data_in[1]*1000/4095; // 283
 					current_c_temp = data_in[2]*1000/4095; // 283
 
+					current_a_sum = current_a_sum + current_a_temp;
+					current_b_sum = current_b_sum + current_b_temp;
+					current_c_sum = current_c_sum + current_c_temp;
+
+					current_counter++;
+
+					if(current_counter>=20)
+					{
+						current_a = current_a_sum/20;
+						current_b = current_b_sum/20;
+						current_c = current_c_sum/20;
+
+						current_a_sum = 0;
+						current_b_sum = 0;
+						current_c_sum = 0;
+
+						current_counter = 0;
+
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_write(2*CURRENT_PHASE_A_REG, (uint8_t)((current_a>>8)&0x00FF) );
+						fm25v02_write(2*CURRENT_PHASE_A_REG+1, (uint8_t)(current_a&0x00FF) );
+						fm25v02_write(2*CURRENT_PHASE_B_REG, (uint8_t)((current_b>>8)&0x00FF) );
+						fm25v02_write(2*CURRENT_PHASE_B_REG+1, (uint8_t)(current_b&0x00FF) );
+						fm25v02_write(2*CURRENT_PHASE_C_REG, (uint8_t)((current_c>>8)&0x00FF) );
+						fm25v02_write(2*CURRENT_PHASE_C_REG+1, (uint8_t)(current_c&0x00FF) );
+						osMutexRelease(Fm25v02MutexHandle);
+
+						status_registers.current_phase_a_reg = current_a;
+						status_registers.current_phase_b_reg = current_b;
+						status_registers.current_phase_c_reg = current_c;
+
+					}
+
+
+					/*
 					osMutexWait(Fm25v02MutexHandle, osWaitForever);
 					fm25v02_write(2*CURRENT_PHASE_A_REG, (uint8_t)((current_a_temp>>8)&0x00FF) );
 					fm25v02_write(2*CURRENT_PHASE_A_REG+1, (uint8_t)(current_a_temp&0x00FF) );
@@ -95,72 +147,185 @@ void ThreadGetCurrentTask(void const * argument)
 					status_registers.current_phase_a_reg = current_a_temp;
 					status_registers.current_phase_b_reg = current_b_temp;
 					status_registers.current_phase_c_reg = current_c_temp;
+					*/
 
-				if( ((control_registers.light_control_reg)&0x0001) == 0x0001 ) // если в управляющем регистре освещения выставлен бит включения фазы А
-				{
+				//if( ((control_registers.light_control_reg)&0x0001) == 0x0001 ) // если в управляющем регистре освещения выставлен бит включения фазы А
+				//{
 
 					if(status_registers.current_phase_a_reg > control_registers.max_current_phase_a) // проверяем если значение тока превысило максимальное значение тока фазы А
 					{
+						overcurrent_phase_a_state++;
 
-						if( ((status_registers.lighting_alarm_reg)&0x0080) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы А
+						if(overcurrent_phase_a_state >= 100)
 						{
-							osMutexWait(Fm25v02MutexHandle, osWaitForever);
-							fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
-							fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
-							temp_l = temp_l|0x80;
-							fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
-							fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
-							status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы А в регистр аварий
-							osMutexRelease(Fm25v02MutexHandle);
+							overcurrent_phase_a_state = 0;
+
+							if( ((status_registers.lighting_alarm_reg)&0x0080) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы А
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
+								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
+								temp_l = temp_l|0x80;
+								fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
+								fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
+								status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы А в регистр аварий
+
+								fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+								fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+								temp_l = temp_l&0xFE;
+								fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+								fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+								osMutexRelease(Fm25v02MutexHandle);
+							}
+							else if( ((status_registers.lighting_alarm_reg)&0x0080) == 0x0080 ) // проверяем установлен ли бит превышения тока фазы А
+							{
+								if( (control_registers.light_control_reg)&0x01 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
+									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+									temp_l = temp_l&0xFE;
+									fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+							}
+
 						}
 
 					}
 
-				}
+					else
+					{
+						overcurrent_phase_a_state = 0;
+					}
 
-				if( ((control_registers.light_control_reg)&0x0002) == 0x0002 ) // если в управляющем регистре освещения выставлен бит включения фазы В
-				{
+				//}
+
+				//if( ((control_registers.light_control_reg)&0x0002) == 0x0002 ) // если в управляющем регистре освещения выставлен бит включения фазы В
+				//{
 
 					if(status_registers.current_phase_b_reg > control_registers.max_current_phase_b) // проверяем если значение тока превысило максимальное значение тока фазы В
 					{
 
-						if( ((status_registers.lighting_alarm_reg)&0x0100) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы В
+						overcurrent_phase_b_state++;
+
+						if(overcurrent_phase_b_state >= 100)
 						{
-							osMutexWait(Fm25v02MutexHandle, osWaitForever);
-							fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
-							fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
-							temp_h = temp_h|0x01;
-							fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
-							fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
-							status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы В в регистр аварий
-							osMutexRelease(Fm25v02MutexHandle);
+							overcurrent_phase_b_state = 0;
+
+							if( ((status_registers.lighting_alarm_reg)&0x0100) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы В
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
+								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
+								temp_h = temp_h|0x01;
+								fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
+								fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
+								status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы В в регистр аварий
+
+								fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+								fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+								temp_l = temp_l&0xFD;
+								fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+								fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+								osMutexRelease(Fm25v02MutexHandle);
+							}
+
+							else if( ((status_registers.lighting_alarm_reg)&0x0100) == 0x0100 ) // проверяем установлен ли бит превышения тока фазы А
+							{
+								if( (control_registers.light_control_reg)&0x02 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
+									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+									temp_l = temp_l&0xFD;
+									fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+							}
+
 						}
 
 					}
 
-				}
+					else
+					{
+						overcurrent_phase_b_state = 0;
+					}
 
-				if( ((control_registers.light_control_reg)&0x0004) == 0x0004 ) // если в управляющем регистре освещения выставлен бит включения фазы С
-				{
+				//}
+
+				//if( ((control_registers.light_control_reg)&0x0004) == 0x0004 ) // если в управляющем регистре освещения выставлен бит включения фазы С
+				//{
 
 					if(status_registers.current_phase_c_reg > control_registers.max_current_phase_c) // проверяем если значение тока превысило максимальное значение тока фазы С
 					{
 
-						if( ((status_registers.lighting_alarm_reg)&0x0200) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы С
+						overcurrent_phase_c_state++;
+
+						if(overcurrent_phase_c_state >= 100)
 						{
-							osMutexWait(Fm25v02MutexHandle, osWaitForever);
-							fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
-							fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
-							temp_h = temp_h|0x02;
-							fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
-							fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
-							status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы А в регистр аварий
-							osMutexRelease(Fm25v02MutexHandle);
+							overcurrent_phase_c_state = 0;
+
+							if( ((status_registers.lighting_alarm_reg)&0x0200) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы С
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
+								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
+								temp_h = temp_h|0x02;
+								fm25v02_write(2*LIGHTING_ALARM_REG, temp_h);
+								fm25v02_write(2*LIGHTING_ALARM_REG+1, temp_l);
+								status_registers.lighting_alarm_reg = (((uint16_t)temp_h)<<8)|temp_l; // если превышение тока длилось 10 циклов, то выставляем бит превышения тока фазы А в регистр аварий
+
+								fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+								fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+								temp_l = temp_l&0xFB;
+								fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+								fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+								osMutexRelease(Fm25v02MutexHandle);
+							}
+
+							else if( ((status_registers.lighting_alarm_reg)&0x0200) == 0x0200 ) // проверяем установлен ли бит превышения тока фазы А
+							{
+								if( (control_registers.light_control_reg)&0x04 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
+									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+									temp_l = temp_l&0xFB;
+									fm25v02_write(2*LIGHT_CONTROL_REG, temp_h);
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, temp_l);
+									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+							}
+
 						}
 
 					}
 
-				}
+					else
+					{
+						overcurrent_phase_c_state = 0;
+					}
+
+				//}
 
 //----контроль фаз, двери и каскада---------------------------------------------------------------------------------------------------------------------
 
@@ -190,11 +355,13 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_a1_off_state<50)
+					phase_a1_on_state = 0;
+
+					if(phase_a1_off_state<200)
 					{
 						phase_a1_off_state++;
 
-						if(phase_a1_off_state == 50)
+						if(phase_a1_off_state >= 200)
 						{
 							phase_a1_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0001) == 0x0001 )
@@ -217,10 +384,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_a1_alarm_state = 0;
 					phase_a1_off_state = 0;
 
-					if(phase_a1_on_state<2)
+					if(phase_a1_on_state<5)
 					{
 						phase_a1_on_state++;
-						if(phase_a1_on_state==2)
+						if(phase_a1_on_state>=5)
 						{
 
 							phase_a1_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -268,10 +435,12 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_a2_off_state<50)
+					phase_a2_on_state = 0;
+
+					if(phase_a2_off_state<200)
 					{
 						phase_a2_off_state++;
-						if(phase_a2_off_state == 50)
+						if(phase_a2_off_state >= 200)
 						{
 							phase_a2_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0008) == 0x0008 )
@@ -294,10 +463,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_a2_alarm_state = 0;
 					phase_a2_off_state = 0;
 
-					if(phase_a2_on_state<2)
+					if(phase_a2_on_state<5)
 					{
 						phase_a2_on_state++;
-						if(phase_a2_on_state==2)
+						if(phase_a2_on_state>=5)
 						{
 
 							phase_a2_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -344,10 +513,12 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_b1_off_state<50)
+					phase_b1_on_state = 0;
+
+					if(phase_b1_off_state<200)
 					{
 						phase_b1_off_state++;
-						if(phase_b1_off_state == 50)
+						if(phase_b1_off_state >= 200)
 						{
 							phase_b1_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0002) == 0x0002 )
@@ -368,10 +539,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_b1_alarm_state = 0;
 					phase_b1_off_state = 0;
 
-					if(phase_b1_on_state<2)
+					if(phase_b1_on_state<5)
 					{
 						phase_b1_on_state++;
-						if(phase_b1_on_state==2)
+						if(phase_b1_on_state>=5)
 						{
 
 							phase_b1_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -416,10 +587,12 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_b2_off_state<50)
+					phase_b2_on_state = 0;
+
+					if(phase_b2_off_state<200)
 					{
 						phase_b2_off_state++;
-						if(phase_b2_off_state == 50)
+						if(phase_b2_off_state >= 200)
 						{
 							phase_b2_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0010) == 0x0010 )
@@ -440,10 +613,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_b2_alarm_state = 0;
 					phase_b2_off_state = 0;
 
-					if(phase_b2_on_state<2)
+					if(phase_b2_on_state<5)
 					{
 						phase_b2_on_state++;
-						if(phase_b2_on_state==2)
+						if(phase_b2_on_state>=5)
 						{
 
 							phase_b2_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -489,10 +662,12 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_c1_off_state<50)
+					phase_c1_on_state = 0;
+
+					if(phase_c1_off_state<200)
 					{
 						phase_c1_off_state++;
-						if(phase_c1_off_state == 50)
+						if(phase_c1_off_state >= 200)
 						{
 							phase_c1_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0004) == 0x0004 )
@@ -514,10 +689,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_c1_alarm_state = 0;
 					phase_c1_off_state = 0;
 
-					if(phase_c1_on_state<2)
+					if(phase_c1_on_state<5)
 					{
 						phase_c1_on_state++;
-						if(phase_c1_on_state==2)
+						if(phase_c1_on_state>=5)
 						{
 
 							phase_c1_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -563,10 +738,12 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 
-					if(phase_c2_off_state<50)
+					phase_c2_on_state = 0;
+
+					if(phase_c2_off_state<200)
 					{
 						phase_c2_off_state++;
-						if(phase_c2_off_state == 50)
+						if(phase_c2_off_state >= 200)
 						{
 							phase_c2_off_state = 0;
 							if( ((status_registers.lighting_status_reg)&0x0020) == 0x0020 )
@@ -587,10 +764,10 @@ void ThreadGetCurrentTask(void const * argument)
 					phase_c2_alarm_state = 0;
 					phase_c2_off_state = 0;
 
-					if(phase_c2_on_state<2)
+					if(phase_c2_on_state<5)
 					{
 						phase_c2_on_state++;
-						if(phase_c2_on_state==2)
+						if(phase_c2_on_state>=5)
 						{
 
 							phase_c2_on_state = 0; // выставляем среднее значение между 0 и 10
@@ -774,10 +951,10 @@ void ThreadGetCurrentTask(void const * argument)
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-			break;
+			//break;
 
-		}
+		//}
 
-		osDelay(10);
+		osDelay(1);
 	}
 }

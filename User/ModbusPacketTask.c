@@ -143,6 +143,8 @@ void ThreadModbusPacketTask(void const * argument)
 					//osTimerStart(Ring_Center_TimerHandle, 300000);
 				}
 
+				osTimerStart(Ring_Center_TimerHandle, 60000);// перезапускаем таймер перезагрузки
+
 
 			break;
 
@@ -252,6 +254,8 @@ void ThreadModbusPacketTask(void const * argument)
 						osMutexRelease(Fm25v02MutexHandle);
 
 					}
+
+					osTimerStart(Ring_Center_TimerHandle, 60000);// перезапускаем таймер перезагрузки
 
 				}
 
