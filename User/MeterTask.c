@@ -19,6 +19,11 @@ void ThreadMeterTask(void const * argument)
 
 	osSemaphoreWait(RS485TransmissionStateHandle, osWaitForever); // обнуляем семафор, при создании семафора его значение равно 1
 
+	osMutexWait(Fm25v02MutexHandle, osWaitForever); // тестово обнуляем регистр ошибки опроса счетчика
+	fm25v02_write(2*CE_303_ERROR_REG, 0x00);
+	fm25v02_write(2*CE_303_ERROR_REG+1, 0x00);
+	osMutexRelease(Fm25v02MutexHandle);
+
 
 
 	for(;;)
