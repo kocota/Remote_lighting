@@ -171,9 +171,26 @@ void ThreadM95Task(void const * argument)
 	//test_l++;
 	//fm25v02_write( (2*0x10C9)+1, test_l);
 	//osMutexRelease(Fm25v02MutexHandle);
-
-
-
+	/*
+	osMutexWait(Fm25v02MutexHandle, osWaitForever);
+	fm25v02_write(2*MONTH_LIGHTING_OFF_REG, 0x00);
+	fm25v02_write(2*MONTH_LIGHTING_OFF_REG+1, 0x01);
+	fm25v02_write(2*DAY_LIGHTING_OFF_REG, 0x00);
+	fm25v02_write(2*DAY_LIGHTING_OFF_REG+1, 0x01);
+	fm25v02_write(2*HOUR_LIGHTING_OFF_REG, 0x00);
+	fm25v02_write(2*HOUR_LIGHTING_OFF_REG+1, 0x01);
+	fm25v02_write(2*MINUTE_LIGHTING_OFF_REG, 0x00);
+	fm25v02_write(2*MINUTE_LIGHTING_OFF_REG+1, 0x01);
+	fm25v02_write(2*MONTH_LIGHTING_ON_REG, 0x00);
+	fm25v02_write(2*MONTH_LIGHTING_ON_REG+1, 0x01);
+	fm25v02_write(2*DAY_LIGHTING_ON_REG, 0x00);
+	fm25v02_write(2*DAY_LIGHTING_ON_REG+1, 0x01);
+	fm25v02_write(2*HOUR_LIGHTING_ON_REG, 0x00);
+	fm25v02_write(2*HOUR_LIGHTING_ON_REG+1, 0x05);
+	fm25v02_write(2*MINUTE_LIGHTING_ON_REG, 0x00);
+	fm25v02_write(2*MINUTE_LIGHTING_ON_REG+1, 0x01);
+	osMutexRelease(Fm25v02MutexHandle);
+	*/
 
 
 	for(;;)

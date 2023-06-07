@@ -23,9 +23,9 @@ volatile uint8_t control_phase_c;
 
 void ThreadGetCurrentTask(void const * argument)
 {
-	volatile uint8_t overcurrent_phase_a_state = 0;
-	volatile uint8_t overcurrent_phase_b_state = 0;
-	volatile uint8_t overcurrent_phase_c_state = 0;
+	volatile uint16_t overcurrent_phase_a_state = 0;
+	volatile uint16_t overcurrent_phase_b_state = 0;
+	volatile uint16_t overcurrent_phase_c_state = 0;
 	volatile uint8_t temp_h;
 	volatile uint8_t temp_l;
 
@@ -75,8 +75,8 @@ void ThreadGetCurrentTask(void const * argument)
 	uint16_t current_c = 0;
 
 
-
-
+	//HAL_Delay(10000);
+	osThreadSuspend(GetCurrentTaskHandle);
 
 	for(;;)
 	{
@@ -156,7 +156,7 @@ void ThreadGetCurrentTask(void const * argument)
 					{
 						overcurrent_phase_a_state++;
 
-						if(overcurrent_phase_a_state >= 100)
+						if(overcurrent_phase_a_state >= control_registers.overcurrent_timeleft_reg)
 						{
 							overcurrent_phase_a_state = 0;
 
@@ -215,7 +215,7 @@ void ThreadGetCurrentTask(void const * argument)
 
 						overcurrent_phase_b_state++;
 
-						if(overcurrent_phase_b_state >= 100)
+						if(overcurrent_phase_b_state >= control_registers.overcurrent_timeleft_reg)
 						{
 							overcurrent_phase_b_state = 0;
 
@@ -275,7 +275,7 @@ void ThreadGetCurrentTask(void const * argument)
 
 						overcurrent_phase_c_state++;
 
-						if(overcurrent_phase_c_state >= 100)
+						if(overcurrent_phase_c_state >= control_registers.overcurrent_timeleft_reg)
 						{
 							overcurrent_phase_c_state = 0;
 
@@ -333,11 +333,11 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( ((control_registers.light_control_reg)&0x0001) == 0x0001 ) // если в управляющем регистре освещения выставлен бит включения фазы А
 					{
-						if(phase_a1_alarm_state<500)
+						if(phase_a1_alarm_state<3000)
 						{
 							phase_a1_alarm_state++;
 
-							if(phase_a1_alarm_state==500)
+							if(phase_a1_alarm_state==3000)
 							{
 								phase_a1_alarm_state = 0;
 
@@ -414,10 +414,10 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( (((control_registers.light_control_reg)&0x0010) == 0x0010) && (((control_registers.light_control_reg)&0x0001) == 0x0001) ) // если контроль второй линии включен и если в управляющем регистре освещения выставлен бит включения фазы А
 					{
-						if(phase_a2_alarm_state<500)
+						if(phase_a2_alarm_state<3000)
 						{
 							phase_a2_alarm_state++;
-							if(phase_a2_alarm_state==500)
+							if(phase_a2_alarm_state==3000)
 							{
 								phase_a2_alarm_state = 0; // выставляем среднее значение между 0 и 10
 
@@ -492,10 +492,10 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( ((control_registers.light_control_reg)&0x0002) == 0x0002 ) // если в управляющем регистре освещения выставлен бит включения фазы В
 					{
-						if(phase_b1_alarm_state<500)
+						if(phase_b1_alarm_state<3000)
 						{
 							phase_b1_alarm_state++;
-							if(phase_b1_alarm_state==500)
+							if(phase_b1_alarm_state==3000)
 							{
 								phase_b1_alarm_state = 0; // выставляем среднее значение между 0 и 10
 
@@ -566,10 +566,10 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( (((control_registers.light_control_reg)&0x0010) == 0x0010) && (((control_registers.light_control_reg)&0x0002) == 0x0002) ) // если контроль второй линии включен и если в управляющем регистре освещения выставлен бит включения фазы В
 					{
-						if(phase_b2_alarm_state<500)
+						if(phase_b2_alarm_state<3000)
 						{
 							phase_b2_alarm_state++;
-							if(phase_b2_alarm_state==500)
+							if(phase_b2_alarm_state==3000)
 							{
 								phase_b2_alarm_state = 0; // выставляем среднее значение между 0 и 10
 
@@ -641,10 +641,10 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( ((control_registers.light_control_reg)&0x0004) == 0x0004 ) // если в управляющем регистре освещения выставлен бит включения фазы С
 					{
-						if(phase_c1_alarm_state<500)
+						if(phase_c1_alarm_state<3000)
 						{
 							phase_c1_alarm_state++;
-							if(phase_c1_alarm_state==500)
+							if(phase_c1_alarm_state==3000)
 							{
 								phase_c1_alarm_state = 0; // выставляем среднее значение между 0 и 10
 
@@ -717,10 +717,10 @@ void ThreadGetCurrentTask(void const * argument)
 				{
 					if( (((control_registers.light_control_reg)&0x0010) == 0x0010) && (((control_registers.light_control_reg)&0x0004) == 0x0004) ) // если контроль второй линии включен и если в управляющем регистре освещения выставлен бит включения фазы С
 					{
-						if(phase_c2_alarm_state<500)
+						if(phase_c2_alarm_state<3000)
 						{
 							phase_c2_alarm_state++;
-							if(phase_c2_alarm_state==500)
+							if(phase_c2_alarm_state==3000)
 							{
 								phase_c2_alarm_state = 0; // выставляем среднее значение между 0 и 10
 

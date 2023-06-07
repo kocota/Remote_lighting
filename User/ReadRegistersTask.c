@@ -20,6 +20,7 @@ void ThreadReadRegistersTask(void const * argument)
 	osDelay(2000); // ждем пока будет получен статус фаз А1,А2,В1,В2,С1,С2
 	osThreadResume(MainTaskHandle); // запускаем основной процесс
 	osThreadResume(M95TaskHandle);  // запускаем процесс модема
+	osThreadResume(GetCurrentTaskHandle);  // запускаем процесс модема
 	osDelay(1000); //ждем 1 секунду
 
 

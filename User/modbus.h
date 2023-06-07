@@ -163,6 +163,8 @@ unsigned int CRC16( unsigned char * pucFrame, unsigned int usLen );
 #define LIGHTING_SWITCHING_REG           0x10C7 // (4295) включение функции освещения (1 - функция освещения включена, 0 - функция освещения выключена)
 #define ALARM_SWITCHING_REG              0x10C8 // (4296) включение охранной функции (1 - функция охраны включена, 0 - функция охраны выключена)
 
+#define OVERCURRENT_TIMELEFT_REG         0x10CA // (4298) время ожидания комутации тока ( в милисекундах)
+
 
 //--------------------------------------------------------
 
@@ -397,6 +399,8 @@ typedef struct
 	uint16_t max_current_phase_c;
 	uint16_t lighting_switching_reg;
 	uint16_t alarm_switching_reg;
+
+	uint16_t overcurrent_timeleft_reg
 
 
 } control_register_struct;

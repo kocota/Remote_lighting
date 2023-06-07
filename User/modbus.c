@@ -593,6 +593,10 @@ void read_control_registers(void)
 	fm25v02_read(2*ALARM_SWITCHING_REG+1, &status_reg_temp_l);
 	control_registers.alarm_switching_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
 
+	fm25v02_read(2*OVERCURRENT_TIMELEFT_REG, &status_reg_temp_h);
+	fm25v02_read(2*OVERCURRENT_TIMELEFT_REG+1, &status_reg_temp_l);
+	control_registers.overcurrent_timeleft_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
+
 	osMutexRelease(Fm25v02MutexHandle);
 
 }
