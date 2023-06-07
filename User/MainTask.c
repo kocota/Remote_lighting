@@ -18,6 +18,10 @@ extern volatile uint8_t phase_a_control_state; // переменная стат�
 extern volatile uint8_t phase_b_control_state; // переменная статуса включения фазы В
 extern volatile uint8_t phase_c_control_state; // переменная статуса включения фазы С
 
+extern volatile uint32_t cur_a;
+extern volatile uint32_t cur_b;
+extern volatile uint32_t cur_c;
+
 RTC_TimeTypeDef current_time;
 RTC_DateTypeDef current_date;
 RTC_TimeTypeDef set_time;
@@ -707,6 +711,22 @@ void ThreadMainTask(void const * argument)
 					osMutexRelease(Fm25v02MutexHandle);
 				break;
 			}
+		}
+
+		if(1)
+		{
+			osMutexWait(Fm25v02MutexHandle, osWaitForever);
+			fm25v02_write(2*CURRENT_PHASE_A_REG, (uint8_t)((cur_a>>8)&0x00FF) );
+			fm25v02_write(2*CURRENT_PHASE_A_REG+1, (uint8_t)(cur_a&0x00FF) );
+			fm25v02_write(2*CURRENT_PHASE_B_REG, (uint8_t)((cur_b>>8)&0x00FF) );
+			fm25v02_write(2*CURRENT_PHASE_B_REG+1, (uint8_t)(cur_b&0x00FF) );
+			fm25v02_write(2*CURRENT_PHASE_C_REG, (uint8_t)((cur_c>>8)&0x00FF) );
+			fm25v02_write(2*CURRENT_PHASE_C_REG+1, (uint8_t)(cur_c&0x00FF) );
+			osMutexRelease(Fm25v02MutexHandle);
+
+			status_registers.current_phase_a_reg = cur_a;
+			status_registers.current_phase_b_reg = cur_b;
+			status_registers.current_phase_c_reg = cur_c;
 		}
 
 

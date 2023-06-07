@@ -389,14 +389,15 @@ void ThreadM95Task(void const * argument)
 			case IP_STATUS:
 
 				LED1_OFF();
-				if( AT_QIOPEN("TCP", ip1 , ip2, ip3, ip4, port) == AT_OK )
-				{
+				m95_power_off();
+				//if( AT_QIOPEN("TCP", ip1 , ip2, ip3, ip4, port) == AT_OK )
+				//{
 
-				}
-				else
-				{
+				//}
+				//else
+				//{
 
-				}
+				//}
 
 			break;
 

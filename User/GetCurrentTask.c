@@ -8,13 +8,20 @@
 extern osThreadId GetCurrentTaskHandle;
 extern ADC_HandleTypeDef hadc1;
 extern osThreadId MainTaskHandle;
+extern TIM_HandleTypeDef htim2;
 //extern ADC_HandleTypeDef hadc1;
 //extern osThreadId LedTaskHandle;
 extern osMutexId Fm25v02MutexHandle;
 extern status_register_struct status_registers;
 extern control_register_struct control_registers;
 
-uint32_t data_in[3];
+extern volatile uint32_t cur_a;
+extern volatile uint32_t cur_b;
+extern volatile uint32_t cur_c;
+
+//uint32_t data_in[3];
+uint16_t data_in[3];
+uint16_t adc_data[3];
 
 volatile uint8_t control_phase_a;
 volatile uint8_t control_phase_b;
@@ -78,24 +85,28 @@ void ThreadGetCurrentTask(void const * argument)
 	//HAL_Delay(10000);
 	osThreadSuspend(GetCurrentTaskHandle);
 
+	HAL_TIM_Base_Start_IT(&htim2);
+
 	for(;;)
 	{
 
 		//switch(control_registers.lighting_switching_reg) // проверяем включена ли функция освещения
 		//{
 			//case(LIGHTING_ON): // если функция освещения включена, то делаем измерения тока
+					//HAL_ADC_Start_DMA(&hadc1, (uint32_t*)data_in, 3);
+					//osThreadSuspend(GetCurrentTaskHandle);
 
-					HAL_ADCEx_InjectedStart(&hadc1);
+					//HAL_ADCEx_InjectedStart(&hadc1);
 
-					while( HAL_ADCEx_InjectedPollForConversion(&hadc1, 1) != HAL_OK )
-					{
+					//while( HAL_ADCEx_InjectedPollForConversion(&hadc1, 1) != HAL_OK )
+					//{
 
-					}
+					//}
 
-					data_in[0] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
-					data_in[1] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_2);
-					data_in[2] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_3);
-
+					//data_in[0] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
+					//data_in[1] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_2);
+					//data_in[2] = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_3);
+					/*
 					current_a_temp = data_in[0]*1000/4095; // 283
 					current_b_temp = data_in[1]*1000/4095; // 283
 					current_c_temp = data_in[2]*1000/4095; // 283
@@ -132,7 +143,7 @@ void ThreadGetCurrentTask(void const * argument)
 						status_registers.current_phase_c_reg = current_c;
 
 					}
-
+					*/
 
 					/*
 					osMutexWait(Fm25v02MutexHandle, osWaitForever);
@@ -152,7 +163,7 @@ void ThreadGetCurrentTask(void const * argument)
 				//if( ((control_registers.light_control_reg)&0x0001) == 0x0001 ) // если в управляющем регистре освещения выставлен бит включения фазы А
 				//{
 
-					if(status_registers.current_phase_a_reg > control_registers.max_current_phase_a) // проверяем если значение тока превысило максимальное значение тока фазы А
+					if(cur_a > (control_registers.max_current_phase_a)*10 ) // проверяем если значение тока превысило максимальное значение тока фазы А
 					{
 						overcurrent_phase_a_state++;
 
@@ -210,7 +221,7 @@ void ThreadGetCurrentTask(void const * argument)
 				//if( ((control_registers.light_control_reg)&0x0002) == 0x0002 ) // если в управляющем регистре освещения выставлен бит включения фазы В
 				//{
 
-					if(status_registers.current_phase_b_reg > control_registers.max_current_phase_b) // проверяем если значение тока превысило максимальное значение тока фазы В
+					if(cur_b > (control_registers.max_current_phase_b)*10 ) // проверяем если значение тока превысило максимальное значение тока фазы В
 					{
 
 						overcurrent_phase_b_state++;
@@ -270,7 +281,7 @@ void ThreadGetCurrentTask(void const * argument)
 				//if( ((control_registers.light_control_reg)&0x0004) == 0x0004 ) // если в управляющем регистре освещения выставлен бит включения фазы С
 				//{
 
-					if(status_registers.current_phase_c_reg > control_registers.max_current_phase_c) // проверяем если значение тока превысило максимальное значение тока фазы С
+					if(cur_c > (control_registers.max_current_phase_c)*10 ) // проверяем если значение тока превысило максимальное значение тока фазы С
 					{
 
 						overcurrent_phase_c_state++;
