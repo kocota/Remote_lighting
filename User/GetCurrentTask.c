@@ -163,6 +163,8 @@ void ThreadGetCurrentTask(void const * argument)
 				//if( ((control_registers.light_control_reg)&0x0001) == 0x0001 ) // если в управляющем регистре освещения выставлен бит включения фазы А
 				//{
 
+					//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
 					if(cur_a > (control_registers.max_current_phase_a)*10 ) // проверяем если значение тока превысило максимальное значение тока фазы А
 					{
 						overcurrent_phase_a_state++;
@@ -173,6 +175,10 @@ void ThreadGetCurrentTask(void const * argument)
 
 							if( ((status_registers.lighting_alarm_reg)&0x0080) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы А
 							{
+								//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+								//PHASE_A_OFF(); // отключаем фазу А
+
 								osMutexWait(Fm25v02MutexHandle, osWaitForever);
 								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
 								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
@@ -189,11 +195,18 @@ void ThreadGetCurrentTask(void const * argument)
 								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 								osMutexRelease(Fm25v02MutexHandle);
+
+								//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
+
 							}
 							else if( ((status_registers.lighting_alarm_reg)&0x0080) == 0x0080 ) // проверяем установлен ли бит превышения тока фазы А
 							{
 								if( (control_registers.light_control_reg)&0x01 )
 								{
+									//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+									//PHASE_A_OFF(); // отключаем фазу А
+
 									osMutexWait(Fm25v02MutexHandle, osWaitForever);
 
 									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
@@ -204,6 +217,8 @@ void ThreadGetCurrentTask(void const * argument)
 									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 									osMutexRelease(Fm25v02MutexHandle);
+
+									//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 								}
 							}
 
@@ -232,6 +247,10 @@ void ThreadGetCurrentTask(void const * argument)
 
 							if( ((status_registers.lighting_alarm_reg)&0x0100) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы В
 							{
+								//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+								//PHASE_B_OFF(); // отключаем фазу В
+
 								osMutexWait(Fm25v02MutexHandle, osWaitForever);
 								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
 								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
@@ -248,12 +267,18 @@ void ThreadGetCurrentTask(void const * argument)
 								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 								osMutexRelease(Fm25v02MutexHandle);
+
+								//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 							}
 
 							else if( ((status_registers.lighting_alarm_reg)&0x0100) == 0x0100 ) // проверяем установлен ли бит превышения тока фазы А
 							{
 								if( (control_registers.light_control_reg)&0x02 )
 								{
+									//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+									//PHASE_B_OFF(); // отключаем фазу В
+
 									osMutexWait(Fm25v02MutexHandle, osWaitForever);
 
 									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
@@ -264,6 +289,8 @@ void ThreadGetCurrentTask(void const * argument)
 									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 									osMutexRelease(Fm25v02MutexHandle);
+
+									//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 								}
 							}
 
@@ -292,6 +319,10 @@ void ThreadGetCurrentTask(void const * argument)
 
 							if( ((status_registers.lighting_alarm_reg)&0x0200) == 0x0000 ) // проверяем установлен ли бит превышения тока фазы С
 							{
+								//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+								//PHASE_C_OFF(); // отключаем фазу С
+
 								osMutexWait(Fm25v02MutexHandle, osWaitForever);
 								fm25v02_read(2*LIGHTING_ALARM_REG, &temp_h);
 								fm25v02_read(2*LIGHTING_ALARM_REG+1, &temp_l);
@@ -308,12 +339,18 @@ void ThreadGetCurrentTask(void const * argument)
 								control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 								osMutexRelease(Fm25v02MutexHandle);
+
+								//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 							}
 
 							else if( ((status_registers.lighting_alarm_reg)&0x0200) == 0x0200 ) // проверяем установлен ли бит превышения тока фазы А
 							{
 								if( (control_registers.light_control_reg)&0x04 )
 								{
+									//osThreadSuspend(MainTaskHandle); // останавливаем на всякий случай основной поток для того чтобы фазы не включились, если будут выключены
+
+									//PHASE_C_OFF(); // отключаем фазу С
+
 									osMutexWait(Fm25v02MutexHandle, osWaitForever);
 
 									fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
@@ -324,6 +361,8 @@ void ThreadGetCurrentTask(void const * argument)
 									control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
 
 									osMutexRelease(Fm25v02MutexHandle);
+
+									//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 								}
 							}
 
@@ -335,6 +374,8 @@ void ThreadGetCurrentTask(void const * argument)
 					{
 						overcurrent_phase_c_state = 0;
 					}
+
+					//osThreadResume(MainTaskHandle); // запускаем основной поток после проверки превышения значений токов
 
 				//}
 
@@ -965,6 +1006,74 @@ void ThreadGetCurrentTask(void const * argument)
 			//break;
 
 		//}
+
+				if(control_registers.lighting_switching_reg == LIGHTING_ON) // если функция освещения включена
+				{
+					switch(control_registers.light_control_reg&0x01) // проверяем бит фазы А
+					{
+						case(PHASE_A_SWITCH_OFF): // если выставлен бит на выключение фазы А
+
+							PHASE_A_OFF(); // выключаем фазу А
+
+						break;
+						case(PHASE_A_SWITCH_ON): // если выставлен бит на включение фазы А
+
+							if( ((status_registers.lighting_status_reg)&0x0001) == 0x0000 ) // если на фазе А1 нет напряжения
+							{
+								PHASE_A_ON(); // включаем фазу А
+							}
+
+						break;
+					}
+					switch(control_registers.light_control_reg&0x02) // проверяем бит фазы В
+					{
+
+						case(PHASE_B_SWITCH_OFF): // если выставлен бит на выключение фазы В
+
+							PHASE_B_OFF(); // выключаем фазу А
+
+						break;
+
+						case(PHASE_B_SWITCH_ON): //если выставлен бит на включение фазы В
+
+							if( ((status_registers.lighting_status_reg)&0x0002) == 0x0000 ) // если на фазе В1 нет напряжения
+							{
+								PHASE_B_ON(); // включаем фазу А
+							}
+
+						break;
+
+					}
+					switch(control_registers.light_control_reg&0x04) // проверяяем бит фазы С
+					{
+
+						case(PHASE_C_SWITCH_OFF): // если выставлен бит на выключение фазы С
+
+							PHASE_C_OFF(); // выключаем фазу А
+
+						break;
+
+						case(PHASE_C_SWITCH_ON): // если выставлен бит на включение фазы С
+
+							if( ((status_registers.lighting_status_reg)&0x0004) == 0x0000 ) // если на фазе В1 нет напряжения
+							{
+								PHASE_C_ON(); // включаем фазу А
+							}
+
+						break;
+
+					}
+				}
+				else if(control_registers.lighting_switching_reg == LIGHTING_OFF) // если функция освещения выключена
+				{
+
+					PHASE_A_OFF(); // отключаем фазу А
+
+					PHASE_B_OFF(); // отключаем фазу В
+
+					PHASE_C_OFF(); // отключаем фазу С
+
+				}
 
 		osDelay(1);
 	}

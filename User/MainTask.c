@@ -627,7 +627,7 @@ void ThreadMainTask(void const * argument)
 
 			break;
 		}
-
+/*
 		if(control_registers.lighting_switching_reg == LIGHTING_ON) // если функция освещения включена
 		{
 			switch(control_registers.light_control_reg&0x01) // проверяем бит фазы А
@@ -695,6 +695,8 @@ void ThreadMainTask(void const * argument)
 			PHASE_C_OFF(); // отключаем фазу С
 
 		}
+
+*/
 
 		if(control_registers.lighting_switching_reg == LIGHTING_ON) // если функция освещения включена
 		{

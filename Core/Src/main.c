@@ -223,13 +223,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 	cur_counter++;
 
-	if(cur_counter>=200)
+	if(cur_counter>=100)
 	{
 		cur_counter=0;
 
-		cur_a_average = cur_data[0]/200;
-		cur_b_average = cur_data[1]/200;
-		cur_c_average = cur_data[2]/200;
+		cur_a_average = cur_data[0]/100;
+		cur_b_average = cur_data[1]/100;
+		cur_c_average = cur_data[2]/100;
 
 		cur_data[0] = 0;
 		cur_data[1] = 0;
