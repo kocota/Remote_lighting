@@ -840,7 +840,7 @@ void ThreadGetCurrentTask(void const * argument)
 				}
 
 
-
+				/*
 				if( HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_0) == GPIO_PIN_RESET ) // если пин каскада сброшен
 				{
 
@@ -952,6 +952,152 @@ void ThreadGetCurrentTask(void const * argument)
 						}
 					}
 				}
+				*/
+
+				if( HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_0) == GPIO_PIN_RESET ) // если пин каскада сброшен
+				{
+
+					cascade_on_state = 0;
+
+					if(cascade_off_state<200)
+					{
+						cascade_off_state++;
+
+						if(cascade_off_state >= 200)
+						{
+							cascade_off_state = 0;
+							/*
+							if( ((status_registers.lighting_status_reg)&0x0001) == 0x0001 )
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_STATUS_REG+1, &phase_temp);
+								phase_temp = phase_temp&0xFE;
+								fm25v02_write(2*LIGHTING_STATUS_REG+1, phase_temp);
+								status_registers.lighting_status_reg = status_registers.lighting_status_reg&0xFFFE;
+								osMutexRelease(Fm25v02MutexHandle);
+								LED3_OFF();
+							}
+							*/
+
+							if( ((status_registers.lighting_status_reg)&0x0040) == 0x0040 )
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_STATUS_REG+1, &phase_temp);
+								phase_temp = phase_temp&0xBF;
+								fm25v02_write(2*LIGHTING_STATUS_REG+1, phase_temp);
+								status_registers.lighting_status_reg = (status_registers.lighting_status_reg)&0xFFBF;
+								osMutexRelease(Fm25v02MutexHandle);
+							}
+
+							if( ((control_registers.light_control_reg)&0x0008) == 0x0008 ) // если контроль каскада включен
+							{
+								if( ((control_registers.light_control_reg)&0x0001) == 0x0001 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp&0xFE;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = (control_registers.light_control_reg)&0xFFFE;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+								if( ((control_registers.light_control_reg)&0x0002) == 0x0002 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp&0xFD;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = (control_registers.light_control_reg)&0xFFFD;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+								if( ((control_registers.light_control_reg)&0x0004) == 0x0004 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp&0xFB;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = (control_registers.light_control_reg)&0xFFFB;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+							}
+
+						}
+					}
+
+				}
+
+				else if(HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_0) == GPIO_PIN_SET) // если пин каскада установлен
+				{
+					//phase_a1_alarm_state = 0;
+					cascade_off_state = 0;
+
+					if(cascade_on_state<5)
+					{
+						cascade_on_state++;
+						if(cascade_on_state>=5)
+						{
+
+							cascade_on_state = 0; // выставляем среднее значение между 0 и 10
+							/*
+							if( ((status_registers.lighting_status_reg)&0x0001) == 0x0000 )
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_STATUS_REG+1, &phase_temp); // читаем значение регистра статуса освещения
+								phase_temp = phase_temp|0x01; // устанавливаем 0-й бит статуса фазы А1
+								fm25v02_write(2*LIGHTING_STATUS_REG+1, phase_temp); // записываем младший байт регистра статуса освещения
+								status_registers.lighting_status_reg = status_registers.lighting_status_reg|0x0001; // выставляем бит фазы А1 в переменной регистра статуса освещения
+								osMutexRelease(Fm25v02MutexHandle);
+								LED3_ON();
+							}
+							*/
+
+							if( ((status_registers.lighting_status_reg)&0x0040) == 0x0000 )
+							{
+								osMutexWait(Fm25v02MutexHandle, osWaitForever);
+								fm25v02_read(2*LIGHTING_STATUS_REG+1, &phase_temp); // читаем значение регистра статуса освещения
+								phase_temp = phase_temp|0x40;
+								fm25v02_write(2*LIGHTING_STATUS_REG+1, phase_temp); // записываем младший байт регистра статуса освещения
+								status_registers.lighting_status_reg = status_registers.lighting_status_reg|0x0040;
+								osMutexRelease(Fm25v02MutexHandle);
+							}
+
+							if( ((control_registers.light_control_reg)&0x0008) == 0x0008 ) // если контроль каскада включен
+							{
+								if( ((control_registers.light_control_reg)&0x0001) == 0x0000 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp|0x01;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = control_registers.light_control_reg|0x01;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+								if( ((control_registers.light_control_reg)&0x0002) == 0x0000 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp|0x02;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = control_registers.light_control_reg|0x02;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+								if( ((control_registers.light_control_reg)&0x0004) == 0x0000 )
+								{
+									osMutexWait(Fm25v02MutexHandle, osWaitForever);
+									fm25v02_read(2*LIGHT_CONTROL_REG+1, &phase_temp); // читаем значение из старшего байта регистра управления освещением
+									phase_temp = phase_temp|0x04;
+									fm25v02_write(2*LIGHT_CONTROL_REG+1, phase_temp); // записываем младший байт регистра управления освещением
+									control_registers.light_control_reg = control_registers.light_control_reg|0x04;
+									osMutexRelease(Fm25v02MutexHandle);
+								}
+							}
+
+						}
+
+
+					}
+
+				}
+
 
 				if( HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_1) == GPIO_PIN_RESET ) // если сброшен пин двери освещения
 				{
