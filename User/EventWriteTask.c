@@ -100,6 +100,8 @@ void ThreadEventWriteTask(void const * argument)
 
 			if( address_event_temp > 0x7FFF )
 			{
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
 				address_event_temp = 0x2000;
 
 				read_temp = (uint8_t)((address_event_temp>>8)&0x00FF);
@@ -107,13 +109,21 @@ void ThreadEventWriteTask(void const * argument)
 				read_temp = (uint8_t)(address_event_temp&0x00FF);
 				fm25v02_write(2*ADDRESS_LAST_EVENT_L_REG+1, read_temp);
 
+				osMutexRelease(Fm25v02MutexHandle);
+
 			}
 			else if( (address_event_temp >= 0x2000) && (address_event_temp <= 0x7FFF) )
 			{
+				osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
 				read_temp = (uint8_t)((address_event_temp>>8)&0x00FF);
 				fm25v02_write(2*ADDRESS_LAST_EVENT_H_REG+1, read_temp);
 				read_temp = (uint8_t)(address_event_temp&0x00FF);
 				fm25v02_write(2*ADDRESS_LAST_EVENT_L_REG+1, read_temp);
+
+				osMutexRelease(Fm25v02MutexHandle);
+
+
 			}
 
 		}

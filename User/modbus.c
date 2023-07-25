@@ -561,6 +561,22 @@ void read_control_registers(void)
 	fm25v02_read(2*MUTE_REG+1, &status_reg_temp_l);
 	control_registers.mute_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
 
+	fm25v02_read(2*DELAY_ON_SENSOR_REG, &status_reg_temp_h);
+	fm25v02_read(2*DELAY_ON_SENSOR_REG+1, &status_reg_temp_l);
+	control_registers.delay_on_sensor_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
+
+	fm25v02_read(2*DELAY_OFF_SENSOR_REG, &status_reg_temp_h);
+	fm25v02_read(2*DELAY_OFF_SENSOR_REG+1, &status_reg_temp_l);
+	control_registers.delay_off_sensor_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
+
+	fm25v02_read(2*LIGHTING_THRESHOLD_ON_REG, &status_reg_temp_h);
+	fm25v02_read(2*LIGHTING_THRESHOLD_ON_REG+1, &status_reg_temp_l);
+	control_registers.lighting_threshold_on_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
+
+	fm25v02_read(2*LIGHTING_THRESHOLD_OFF_REG, &status_reg_temp_h);
+	fm25v02_read(2*LIGHTING_THRESHOLD_OFF_REG+1, &status_reg_temp_l);
+	control_registers.lighting_threshold_off_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;
+
 	fm25v02_read(2*LIGHT_CONTROL_REG, &status_reg_temp_h);
 	fm25v02_read(2*LIGHT_CONTROL_REG+1, &status_reg_temp_l);
 	control_registers.light_control_reg = (((uint16_t)status_reg_temp_h)<<8)|status_reg_temp_l;

@@ -4,6 +4,7 @@
 #include "gpio.h"
 #include "fm25v02.h"
 #include "m95.h"
+#include "tsl2561.h"
 
 extern osThreadId MainTaskHandle;
 extern osThreadId EventWriteTaskHandle;
@@ -21,6 +22,13 @@ extern volatile uint8_t phase_c_control_state; // переменная стат�
 extern volatile uint32_t cur_a;
 extern volatile uint32_t cur_b;
 extern volatile uint32_t cur_c;
+
+extern  double data_lux;
+extern bool gain;        // Gain setting, 0 = X1, 1 = X16;
+extern unsigned char time;
+extern unsigned int ms;
+extern unsigned int data0, data2;
+extern double lux;    // Resulting lux value
 
 RTC_TimeTypeDef current_time;
 RTC_DateTypeDef current_date;
@@ -49,6 +57,17 @@ uint8_t temp_time_off_3_minute;
 uint8_t temp_time_off_4_hour;
 uint8_t temp_time_off_4_minute;
 
+volatile uint16_t time_on_counter = 0;
+volatile uint16_t time_off_counter = 0;
+volatile uint8_t on_state = 0;
+volatile uint8_t off_state = 0;
+
+bool d_state1;
+bool d_state2;
+bool d_state3;
+bool d_state4;
+unsigned char sensor_id;
+
 
 
 void ThreadMainTask(void const * argument)
@@ -60,6 +79,9 @@ void ThreadMainTask(void const * argument)
 
 
 	osThreadSuspend(MainTaskHandle); // ждем пока не будут вычитаны регистры и не получен статус фаз А1,А2,В1,В2,С1,С2
+
+	time_on_counter = (control_registers.delay_on_sensor_reg + 1); // выставляем значения, чтобы не происходило переключений освещения после сброса контроллера
+	time_off_counter = (control_registers.delay_off_sensor_reg + 1);
 
 
 	for(;;)
@@ -157,7 +179,7 @@ void ThreadMainTask(void const * argument)
 				osThreadResume(EventWriteTaskHandle);
 			}
 		}
-
+		/*
 		switch(control_registers.security_control_reg) // проверяем значение переменной включения охранной сигнализации
 		{
 
@@ -243,6 +265,7 @@ void ThreadMainTask(void const * argument)
 
 			break;
 		}
+		*/
 
 		switch(control_registers.time_update_reg) // проверяем значение переменной обновления времени
 		{
@@ -599,12 +622,12 @@ void ThreadMainTask(void const * argument)
 				fm25v02_write(2*ERROR_LOOP_REG+1, 0);
 				osMutexRelease(Fm25v02MutexHandle);
 
-				osMutexWait(Fm25v02MutexHandle, osWaitForever);
-				fm25v02_write(2*GPRS_CALL_REG, 0x00);
-				fm25v02_write(2*GPRS_CALL_REG+1, CALL_ON);
-				osMutexRelease(Fm25v02MutexHandle);
+				//osMutexWait(Fm25v02MutexHandle, osWaitForever);
+				//fm25v02_write(2*GPRS_CALL_REG, 0x00);
+				//fm25v02_write(2*GPRS_CALL_REG+1, CALL_ON);
+				//osMutexRelease(Fm25v02MutexHandle);
 
-				osThreadResume(EventWriteTaskHandle);
+				//osThreadResume(EventWriteTaskHandle);
 				//osTimerStart(Ring_Center_TimerHandle, 1);
 
 				osMutexWait(Fm25v02MutexHandle, osWaitForever);
@@ -647,6 +670,12 @@ void ThreadMainTask(void const * argument)
 				fm25v02_write(2*CE_303_POWER_MIL_B_REG+1, 0);
 				fm25v02_write(2*CE_303_POWER_MIL_C_REG, 0);
 				fm25v02_write(2*CE_303_POWER_MIL_C_REG+1, 0);
+
+				fm25v02_write(2*LIGHTING_STATUS_REG, 0);
+				fm25v02_write(2*LIGHTING_STATUS_REG+1, 0);
+				fm25v02_write(2*LIGHTING_ALARM_REG, 0);
+				fm25v02_write(2*LIGHTING_ALARM_REG+1, 0);
+
 				fm25v02_write(2*MONTH_LIGHTING_OFF_REG, 0);
 				fm25v02_write(2*MONTH_LIGHTING_OFF_REG+1, 0);
 				fm25v02_write(2*DAY_LIGHTING_OFF_REG, 0);
@@ -699,6 +728,11 @@ void ThreadMainTask(void const * argument)
 				fm25v02_write(2*CE_303_TARIF5_POWER_L_REG+1, 0);
 				fm25v02_write(2*CE_303_TARIF5_POWER_MIL_REG, 0);
 				fm25v02_write(2*CE_303_TARIF5_POWER_MIL_REG+1, 0);
+
+				fm25v02_write(2*LIGHT_CONTROL_REG, 0);
+				fm25v02_write(2*LIGHT_CONTROL_REG+1, 0);
+
+				osMutexRelease(Fm25v02MutexHandle);
 
 				osThreadResume(EventWriteTaskHandle);
 
@@ -824,6 +858,180 @@ void ThreadMainTask(void const * argument)
 			status_registers.current_phase_a_reg = cur_a;
 			status_registers.current_phase_b_reg = cur_b;
 			status_registers.current_phase_c_reg = cur_c;
+		}
+
+		if(1)
+		{
+			if( TSL2561_getID(&sensor_id) == true)
+			{
+				//TSL2561_setPowerDown();
+				//HAL_Delay(1000);
+				//while( TSL2561_getID(&sensor_id) == true){}
+				d_state2 = TSL2561_setTiming_ms(gain, time,&ms);
+				TSL2561_setPowerUp();
+				//HAL_Delay(1000);
+				//while( TSL2561_getID(&sensor_id) == false){}
+				d_state1 = TSL2561_getData(&data0, &data2);
+				if( TSL2561_getLux(gain, ms, data0, data2, &lux) == 1)
+				{
+					data_lux = lux/1.8;
+					//data_lux = 2000;
+				}
+				else
+				{
+					data_lux = 40000;
+				}
+
+			}
+			else
+			{
+				HAL_I2C_DeInit(&hi2c1);
+				HAL_I2C_Init(&hi2c1);
+				//d_state4 = TSL2561_setPowerDown();
+				//while( TSL2561_getID(&sensor_id) == true){}
+				//d_state2 = TSL2561_setTiming_ms(gain, time,&ms);
+				//d_state3 = TSL2561_setPowerUp();
+				//while( TSL2561_getID(&sensor_id) == false){}
+				//HAL_Delay(2000);
+			}
+
+
+		}
+
+		if( ((control_registers.light_control_reg)&0x0040) == 0x0040 ) // если включено управление по датчику освещенности
+		{
+			if( data_lux > control_registers.lighting_threshold_off_reg )
+			{
+				//time_on_counter = 0;
+
+				if(time_off_counter < control_registers.delay_off_sensor_reg)
+				{
+					time_off_counter++;
+				}
+				else if(time_off_counter == control_registers.delay_off_sensor_reg)
+				{
+					time_off_counter++;
+					//time_on_counter = 0;
+
+					if(((control_registers.light_control_reg)&0x0001)==0x0001) // если включена фаза А, выключаем фазу А
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp&0xFE;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg&0xFFFE;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_on_counter = (control_registers.delay_on_sensor_reg + 1);
+					}
+					if(((control_registers.light_control_reg)&0x0002)==0x0002) // если включена фаза В, выключаем фазу В
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp&0xFD;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg&0xFFFD;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_on_counter = (control_registers.delay_on_sensor_reg + 1);
+					}
+					if(((control_registers.light_control_reg)&0x0004)==0x0004) // если включена фаза С, выключаем фазу С
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp&0xFB;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg|0xFFFB;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_on_counter = (control_registers.delay_on_sensor_reg + 1);
+					}
+				}
+
+			}
+
+			else if( data_lux <= control_registers.lighting_threshold_off_reg )
+			{
+				time_off_counter = 0;
+				//time_on_counter = (control_registers.delay_on_sensor_reg + 1);
+				//if(time_on_counter == (control_registers.delay_on_sensor_reg + 1))
+				//{
+					//time_on_counter = 0;
+				//}
+			}
+
+			if( data_lux < control_registers.lighting_threshold_on_reg )
+			{
+				//time_off_counter = 0;
+
+				if(time_on_counter < control_registers.delay_on_sensor_reg)
+				{
+					time_on_counter++;
+				}
+				else if( time_on_counter == control_registers.delay_on_sensor_reg )
+				{
+					time_on_counter++;
+					//time_off_counter = 0;
+
+					if(((control_registers.light_control_reg)&0x0001)==0x0000) // если выключена фаза А, включаем фазу А
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp|0x01;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg|0x0001;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_off_counter = (control_registers.delay_off_sensor_reg + 1);
+					}
+					if(((control_registers.light_control_reg)&0x0002)==0x0000) // если выключена фаза В, включаем фазу В
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp|0x02;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg|0x0002;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_off_counter = (control_registers.delay_off_sensor_reg + 1);
+					}
+					if(((control_registers.light_control_reg)&0x0004)==0x0000) // если выключена фаза С, включаем фазу С
+					{
+						osMutexWait(Fm25v02MutexHandle, osWaitForever);
+						fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp);
+						temp = temp|0x04;
+						fm25v02_write(2*LIGHT_CONTROL_REG+1, temp);
+						control_registers.light_control_reg = control_registers.light_control_reg|0x0004;
+						osMutexRelease(Fm25v02MutexHandle);
+					}
+					else
+					{
+						time_off_counter = (control_registers.delay_off_sensor_reg + 1);
+					}
+				}
+
+			}
+			else if( data_lux >= control_registers.lighting_threshold_on_reg )
+			{
+				time_on_counter = 0;
+				//time_off_counter = (control_registers.delay_off_sensor_reg + 1);
+				//if(time_off_counter == (control_registers.delay_off_sensor_reg + 1) )
+				//{
+					//time_off_counter = 0;
+				//}
+			}
+
+
 		}
 
 

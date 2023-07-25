@@ -153,6 +153,10 @@ unsigned int CRC16( unsigned char * pucFrame, unsigned int usLen );
 #define GPRS_CALL_REG                    0x10B7 // (4279) флаг что устройство по GPRS звонит в центр ( 1 - звонит, сбросить в 0 )
 
 #define MUTE_REG                         0x10B9 // (4281) регистр управления отключением звука при тревоге открытия двери (1 - звук отключен, 0 - звук включен)
+#define DELAY_ON_SENSOR_REG              0x10BA // (4282) регистр задержки на включение по датчику освещенности. (t = x * 500 милисекунд)
+#define DELAY_OFF_SENSOR_REG             0x10BB // (4283) регистр задержки на выключение по датчику освещенности. (t = x * 500 милисекунд)
+#define LIGHTING_THRESHOLD_ON_REG        0x10BC // (4284) регистр порога включения освещения, ед.изм. люкс
+#define LIGHTING_THRESHOLD_OFF_REG       0x10BD // (4285) регистр порога выключения освещения, ед.изм. люкс
 
 #define LIGHT_CONTROL_REG                0x10C1 // (4289) регистр управления освещением (бит 0 - управление фазой А, бит 1 - управление фазой В, бит 2 - управление фазой С, бит 3- управление от каскада, бит 4 - контроль второй линии, бит 5 - работать по расписанию)
 #define LIGHTING_ALARM_RESET_REG         0x10C2 // (4290) регистр сброса аварий освещения (запись 1 для сброса аварий освещения)
@@ -390,6 +394,10 @@ typedef struct
 	uint16_t gprs_call_reg;
 
 	uint16_t mute_reg; // переменная управления отключением звука при тревоге открытия двери
+	uint16_t delay_on_sensor_reg;
+	uint16_t delay_off_sensor_reg;
+	uint16_t lighting_threshold_on_reg;
+	uint16_t lighting_threshold_off_reg;
 
 	uint16_t light_control_reg; // переменная управления освещением
 	uint16_t lighting_alarm_reset_reg;
@@ -400,7 +408,7 @@ typedef struct
 	uint16_t lighting_switching_reg;
 	uint16_t alarm_switching_reg;
 
-	uint16_t overcurrent_timeleft_reg
+	uint16_t overcurrent_timeleft_reg;
 
 
 } control_register_struct;

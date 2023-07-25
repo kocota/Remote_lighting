@@ -25,6 +25,12 @@
 
 #include "gpio.h"
 #include "m95.h"
+#include "tsl2561.h"
+#include "modbus.h"
+#include "fm25v02.h"
+//#include "math.h"
+//#include "stdio.h"
+//#include "string.h"
 
 
 /* USER CODE END Includes */
@@ -128,6 +134,15 @@ volatile uint32_t cur_c_average;
 volatile uint32_t cur_a;
 volatile uint32_t cur_b;
 volatile uint32_t cur_c;
+
+double data_lux;
+bool gain=0;        // Gain setting, 0 = X1, 1 = X16;
+unsigned char time = 2;
+unsigned int ms;
+unsigned int data0, data2;
+double lux;    // Resulting lux value
+
+extern control_register_struct control_registers;
 
 
 /* USER CODE END PV */
@@ -266,6 +281,9 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+  //uint8_t temp_h;
+  //uint8_t temp_l;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -296,6 +314,24 @@ int main(void)
   MX_TIM2_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+ /*
+  fm25v02_read(2*LIGHT_CONTROL_REG, &temp_h);
+  fm25v02_read(2*LIGHT_CONTROL_REG+1, &temp_l);
+  control_registers.light_control_reg = (((uint16_t)temp_h)<<8)|temp_l;
+
+	if(((control_registers.light_control_reg)&0x0001)==0x0001) // если включена фаза А, выключаем фазу А
+	{
+		PHASE_A_ON(); // включаем фазу А
+	}
+	if(((control_registers.light_control_reg)&0x0002)==0x0002) // если включена фаза В, выключаем фазу В
+	{
+		PHASE_B_ON(); // включаем фазу А
+	}
+	if(((control_registers.light_control_reg)&0x0004)==0x0004) // если включена фаза С, выключаем фазу С
+	{
+		PHASE_C_ON(); // включаем фазу А
+	}
+*/
 
   BUZ_ON();
   HAL_Delay(50);
@@ -309,6 +345,9 @@ int main(void)
   {
 	  LED_VD4_OFF();
   }
+
+  TSL2561_setTiming_ms(gain, time,&ms);
+  TSL2561_setPowerUp();
 
   /* USER CODE END 2 */
 
@@ -548,7 +587,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 1000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -1003,7 +1042,10 @@ void Callback_AT_Timer(void const * argument)
 void Callback_Ring_Center_Timer(void const * argument)
 {
 
-	NVIC_SystemReset();
+	//NVIC_SystemReset();
+	m95_power_off();
+	osTimerStart(Ring_Center_TimerHandle, 60000);// перезапускаем таймер перезагрузки
+
 
 }
 
@@ -1023,8 +1065,13 @@ void StartDefaultTask(void const * argument)
   for(;;)
   {
 
+	osMutexWait(Fm25v02MutexHandle, osWaitForever);
+
 	HAL_IWDG_Refresh(&hiwdg);
 	LED_VD3_TOGGLE();
+
+	osMutexRelease(Fm25v02MutexHandle);
+
     osDelay(1000);
 
   }
