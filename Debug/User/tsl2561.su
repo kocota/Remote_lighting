@@ -1,0 +1,16 @@
+tsl2561.c:9:6:TSL2561_setPowerUp	8	static
+tsl2561.c:15:6:TSL2561_setPowerDown	8	static
+tsl2561.c:21:6:TSL2561_setTiming	24	static
+tsl2561.c:53:6:TSL2561_setTiming_ms	16	static
+tsl2561.c:76:6:TSL2561_manualStart	16	static
+tsl2561.c:104:6:TSL2561_manualStop	16	static
+tsl2561.c:124:6:TSL2561_getData	16	static
+tsl2561.c:134:6:TSL2561_getLux	64	static
+tsl2561.c:201:6:TSL2561_setInterruptControl	16	static
+tsl2561.c:220:6:TSL2561_setInterruptThreshold	16	static
+tsl2561.c:235:6:TSL2561_clearInterrupt	24	static
+tsl2561.c:250:6:TSL2561_getID	16	static
+tsl2561.c:265:6:TSL2561_WriteByte	32	static
+tsl2561.c:282:6:TSL2561_ReadByte	32	static
+tsl2561.c:303:6:TSL2561_readUInt	32	static
+tsl2561.c:337:6:TSL2561_writeUInt	24	static
